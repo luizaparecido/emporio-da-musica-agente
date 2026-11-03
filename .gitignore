@@ -1,0 +1,18 @@
+# Segredos
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Estado local do agente (histórico de conversas e tickets)
+var/
+*.sqlite3
+
+# Sistema
+.DS_Store

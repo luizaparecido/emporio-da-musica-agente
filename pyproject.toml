@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emporio-agent"
+version = "0.1.0"
+description = "Agente de atendimento da Empório da Música (desafio técnico AI Engineer)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "anthropic>=2.4,<3",
+  "google-genai>=2.34,<3",
+  "holidays>=0.108",
+  "pdfplumber>=0.11",
+  "pydantic>=2.14,<3",
+  "python-dotenv>=1.2",
+  "rapidfuzz>=3.14",
+  "rich>=15",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9"]
+
+[project.scripts]
+emporio-agent = "emporio_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
