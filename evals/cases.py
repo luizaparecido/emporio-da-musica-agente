@@ -16,6 +16,7 @@ class Case:
     id: str
     turns: list[str]
     required_tools: set[str] = field(default_factory=set)
+    required_any_tools: set[str] = field(default_factory=set)  # ao menos uma
     forbidden_tools: set[str] = field(default_factory=set)
     must_contain: list[str] = field(default_factory=list)  # todas precisam aparecer
     must_contain_any: list[str] = field(default_factory=list)  # ao menos uma
@@ -45,7 +46,7 @@ CASES = [
     Case(
         "horario",
         ["Vocês abrem sábado? Até que horas?"],
-        required_tools={"get_store_status"},
+        required_any_tools={"get_store_status", "consult_policy"},  # ambas têm o horário regular
         must_contain=["13"],
     ),
     Case(

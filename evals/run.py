@@ -38,6 +38,8 @@ def check(case: Case, replies: list[AgentReply]) -> list[str]:
     lowered = text.casefold()
     failures = []
     failures += [f"não chamou {t}" for t in sorted(case.required_tools - called)]
+    if case.required_any_tools and not case.required_any_tools & called:
+        failures.append(f"não chamou nenhuma de {sorted(case.required_any_tools)}")
     failures += [f"chamou {t} indevidamente" for t in sorted(case.forbidden_tools & called)]
     failures += [f"faltou '{s}'" for s in case.must_contain if s.casefold() not in lowered]
     failures += [f"citou '{s}'" for s in case.must_not_contain if s.casefold() in lowered]
@@ -71,6 +73,11 @@ def render_report(results: list[CaseResult], provider: str, model: str) -> str:
         tools = ", ".join(step.name for reply in result.replies for step in reply.tool_trace) or "-"
         status = "OK" if result.passed else "FALHOU"
         lines.append(f"| {result.case.id} | {status} | {tools} | {'; '.join(result.failures) or '-'} |")
+    lines += ["", "## Conversas", ""]
+    for result in results:
+        lines += [f"### {result.case.id}", ""]
+        for turn, reply in zip(result.case.turns, result.replies):
+            lines += [f"**Cliente:** {turn}", "", f"**Tom:** {reply.text}", ""]
     return "\n".join(lines) + "\n"
 
 
@@ -87,13 +94,16 @@ def main() -> int:
         settings = replace(settings, db_path=Path(tmp) / "evals.sqlite3")
         agent = build_agent(settings)
         customer_14 = StoreRepository.from_csv(settings.data_dir).customers[14]
-        results = []
+        results: list[CaseResult] = []
+        interrupted = False
         for case in cases:
             try:
                 result = run_case(agent, case, customer_14)
             except LLMError as exc:
-                print(f"Erro do provedor, avaliação interrompida: {exc}")
-                return 2
+                # Cotas podem acabar no meio: o que já rodou continua no relatório.
+                print(f"Erro do provedor, avaliação interrompida em {case.id}: {str(exc)[:200]}")
+                interrupted = True
+                break
             print(f"{'OK    ' if result.passed else 'FALHOU'} {case.id} {result.failures or ''}")
             results.append(result)
 
@@ -101,7 +111,9 @@ def main() -> int:
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(report, encoding="utf-8")
-    print(f"\n{sum(r.passed for r in results)}/{len(results)} aprovados")
+    print(f"\n{sum(r.passed for r in results)}/{len(results)} aprovados de {len(cases)} casos")
+    if interrupted:
+        return 2
     return 0 if all(r.passed for r in results) else 1
 
 

@@ -1,11 +1,12 @@
 """Gera as conversas de `examples/` a partir de execuções reais do agente.
 
 Nenhuma resposta é escrita à mão: cada arquivo registra o que o modelo respondeu e as tools usadas.
-Uso: python scripts/generate_examples.py
+Uso: python scripts/generate_examples.py [--only 03,05]
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import tempfile
@@ -108,7 +109,7 @@ def run_scenario(agent: Agent, scenario: Scenario, provider: str, model: str, si
     return "\n".join(lines)
 
 
-def generate(settings: Settings) -> None:
+def generate(settings: Settings, only: set[str] | None = None) -> None:
     repo = StoreRepository.from_csv(settings.data_dir)
     phones = {order_id: repo.customers[repo.orders[order_id].customer_id].phone_digits for order_id in (7, 8)}
     scenarios = build_scenarios(_format_phone(phones[8]), _format_phone(phones[7]))
@@ -116,6 +117,8 @@ def generate(settings: Settings) -> None:
         agent = build_agent(replace(settings, db_path=Path(tmp) / "examples.sqlite3"))
         simulated_now = settings.clock.now().isoformat(timespec="minutes")
         for scenario in scenarios:
+            if only and scenario.filename[:2] not in only:
+                continue
             content = run_scenario(agent, scenario, settings.provider, settings.model, simulated_now)
             OUTPUT_DIR.mkdir(exist_ok=True)
             (OUTPUT_DIR / scenario.filename).write_text(content, encoding="utf-8")
@@ -127,7 +130,10 @@ def _format_phone(digits: str) -> str:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--only", help="Prefixos dos cenários separados por vírgula, como 03,05.")
+    args = parser.parse_args()
     try:
-        generate(load_settings())
+        generate(load_settings(), set(args.only.split(",")) if args.only else None)
     except LLMError as exc:
         sys.exit(f"Erro do provedor: {exc}")
