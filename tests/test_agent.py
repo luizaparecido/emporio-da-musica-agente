@@ -191,7 +191,15 @@ def test_return_eligibility_result(settings, repo):
     agent, _ = agent_with(settings, [call("check_return_eligibility", order_id=7, contact=phone, reason="defeito"), final("x")])
     data = result_of(agent.reply("s1", "?"))
     assert data["resultado"] == "fora_da_troca_mas_na_garantia_legal"
-    assert data["garantia_legal_ate"] == "18/05/2026" and "previsão de entrega" in data["aviso_sobre_datas"]
+    assert data["garantia_legal_ate"] == "18/05/2026" and "data da compra" in data["aviso_sobre_datas"]
+
+
+def test_regret_result_explains_date_basis_without_assuming_late_delivery(settings, repo):
+    phone = repo.customers[14].phone_digits
+    agent, _ = agent_with(settings, [call("check_return_eligibility", order_id=7, contact=phone, reason="arrependimento"), final("x")])
+    data = result_of(agent.reply("s1", "?"))
+    assert data["prazo_limite"] == "24/02/2026" and "previsão de entrega" in data["aviso_sobre_datas"]
+    assert "Não presuma" in data["orientacao"]
 
 
 # --- Tools ------------------------------------------------------------------

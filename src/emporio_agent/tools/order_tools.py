@@ -73,8 +73,8 @@ GUIDANCE = {
         "Reembolso na forma de pagamento original em até 10 dias úteis. Abra um ticket para a equipe seguir com a devolução."
     ),
     (ReturnReason.REGRET, Outcome.EXPIRED): (
-        "Prazo de 7 dias corridos encerrado. Se o cliente recebeu em data muito diferente da previsão, "
-        "encaminhe à equipe para conferir. Se houver defeito, a regra é outra: pergunte."
+        "Prazo de 7 dias corridos encerrado. Não presuma que a entrega atrasou: só ofereça conferência da equipe "
+        "se o próprio cliente disser que recebeu bem depois da previsão. Se houver defeito, a regra é outra."
     ),
     (ReturnReason.PREFERENCE, Outcome.ELIGIBLE): (
         "Troca permitida se o produto desejado estiver disponível, em perfeito estado e na embalagem original. "
@@ -101,8 +101,12 @@ NOT_DELIVERED_GUIDANCE = (
 )
 CANCELLED_GUIDANCE = "Este pedido já está cancelado: não há o que devolver."
 ESTIMATE_NOTE = (
-    "A base não registra a data real de recebimento: os prazos usam a previsão de entrega. "
-    "Avise o cliente disso ao citar datas."
+    "A base não registra a data real de recebimento: o prazo_limite conta da previsão de entrega. "
+    "Avise o cliente disso ao citar a data."
+)
+DEFECT_DATES_NOTE = (
+    "O prazo_limite da troca conta da data da compra. A garantia_legal_ate conta do recebimento, e a base só tem "
+    "a previsão de entrega: avise o cliente disso ao citar a garantia."
 )
 
 
@@ -181,7 +185,7 @@ def build_order_tools(
             view["orientacao"] = CANCELLED_GUIDANCE
         else:
             view["orientacao"] = GUIDANCE[(result.reason, result.outcome)]
-            view["aviso_sobre_datas"] = ESTIMATE_NOTE
+            view["aviso_sobre_datas"] = DEFECT_DATES_NOTE if result.reason is ReturnReason.DEFECT else ESTIMATE_NOTE
         if result.deadline:
             view["prazo_limite"] = format_date(result.deadline)
         if result.legal_warranty_until:

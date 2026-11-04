@@ -17,6 +17,7 @@ from emporio_agent.llm.base import (
     Usage,
 )
 
+REQUEST_TIMEOUT_MS = 60_000
 RETRY_OPTIONS = types.HttpRetryOptions(attempts=5, initial_delay=2.0, http_status_codes=[429, 500, 503, 504])
 BLOCKED_FINISH_REASONS = {"SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII"}
 
@@ -30,7 +31,9 @@ class GeminiClient:
 
     def __init__(self, model: str, client: genai.Client | None = None) -> None:
         self.model = model
-        self._client = client or genai.Client(http_options=types.HttpOptions(retry_options=RETRY_OPTIONS))
+        self._client = client or genai.Client(
+            http_options=types.HttpOptions(timeout=REQUEST_TIMEOUT_MS, retry_options=RETRY_OPTIONS)
+        )
 
     def user_message(self, text: str) -> dict:
         return _dump(types.Content(role="user", parts=[types.Part(text=text)]))
