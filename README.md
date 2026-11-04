@@ -24,10 +24,10 @@ cp .env.example .env
 
 No `.env`, escolha o provedor e preencha a chave correspondente:
 
-| Provedor | Variáveis | Modelo padrão |
-| --- | --- | --- |
-| Claude | `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` | `claude-opus-5-5` |
-| Gemini | `LLM_PROVIDER=gemini`, `GEMINI_API_KEY` | `gemini-3.8-flash` |
+| Provedor | Variáveis                                        | Modelo padrão       |
+| -------- | ------------------------------------------------- | -------------------- |
+| Gemini (testado ao vivo) | `LLM_PROVIDER=gemini`, `GEMINI_API_KEY`       | `gemini-3.5-flash-lite` |
+| Claude (sem teste ao vivo) | `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` | `claude-opus-5-5`  |
 
 `LLM_MODEL` troca o modelo padrão.
 
@@ -63,8 +63,8 @@ O manual tem 8 páginas e 28 seções. A ingestão separa as seções pela tipog
 
 Claude e Gemini ficam atrás da interface `LLMClient`, com um adaptador para cada um. O histórico é guardado no formato nativo do provedor e reenviado sem alteração, porque blocos de raciocínio e assinaturas precisam voltar intactos. Por isso, uma sessão fica presa ao provedor em que começou.
 
-- **Claude:** `claude-opus-5-5` com `effort: low`, adequado a chat. O `system` e o histórico usam prompt caching. A opção `fallbacks: "default"` (beta) repete no servidor pedidos recusados por classificadores de segurança, e `stop_reason: "refusal"` é tratado antes de ler a resposta.
-- **Gemini:** alternativa para quem quiser testar com o tier gratuito do Google AI Studio. Limites de requisição podem atrapalhar os evals.
+- **Claude:** preparado, mas **sem execução real**: a conta disponível estava sem créditos, então o adaptador só foi testado com tipos do SDK, sem rede. Usa `claude-opus-5-5` com `effort: low`, adequado a chat. O `system` e o histórico usam prompt caching. A opção `fallbacks: "default"` (beta) repete no servidor pedidos recusados por classificadores de segurança, e `stop_reason: "refusal"` é tratado antes de ler a resposta.
+- **Gemini:** provedor padrão e único executado de ponta a ponta, com `gemini-3.5-flash-lite` no tier gratuito do Google AI Studio. Foi o modelo que respondeu de forma estável nos testes. O tier gratuito tem limites por minuto e por dia, e modelos maiores deram 503 e timeout em horários de alta demanda.
 - **Cache:** data e hora vão na mensagem do turno, não no system prompt, para não invalidar o cache.
 
 ### Estratégia de prompt
@@ -73,12 +73,12 @@ O prompt (`prompts/system.md`) é versionado separado do código e cobre persona
 
 As proteções importantes não dependem do prompt:
 
-| Risco | Proteção em código |
-| --- | --- |
-| Inventar preço | Guardrail rejeita valores em R$ sem origem em tools ou na fala do cliente: uma nova tentativa e, depois, encaminhamento à equipe |
-| Vazar dados de cliente | Tools exigem número do pedido + contato e devolvem só o primeiro nome |
-| Descobrir pedidos por tentativa | Mesma resposta para pedido inexistente e contato errado, com bloqueio após 3 falhas |
-| Cliente se passar pelo sistema | A tag de contexto é removida do texto do cliente |
+| Risco                           | Proteção em código                                                                                                             |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Inventar preço                 | Guardrail rejeita valores em R$ sem origem em tools ou na fala do cliente: uma nova tentativa e, depois, encaminhamento à equipe |
+| Vazar dados de cliente          | Tools exigem número do pedido + contato e devolvem só o primeiro nome                                                           |
+| Descobrir pedidos por tentativa | Mesma resposta para pedido inexistente e contato errado, com bloqueio após 3 falhas                                              |
+| Cliente se passar pelo sistema  | A tag de contexto é removida do texto do cliente                                                                                 |
 
 ### Interface e persistência
 
@@ -93,22 +93,22 @@ Telefones são normalizados para dígitos, e-mails para minúsculas, dinheiro us
 
 O enunciado pede para documentar interpretações. Estas merecem validação com a loja:
 
-| Situação | Decisão |
-| --- | --- |
-| Pedidos terminam em março/2026 | `AGENT_NOW=2026-03-25T10:30` no `.env.example`, para que prazos e atrasos façam sentido. Remova para usar o relógio real |
-| WhatsApp: (67) 3341-4444 no §1.2 e (67) 3321-4500 no §7 | Vale 3341-4444, que coincide com a capa (errata em `policies/errata.py`) |
-| E-mail com e sem acento no domínio | Vale a versão sem acento, da capa |
-| Parcela mínima: R$ 100 na tabela do §3 e faixas no §3.1 | Vale o §3.1, mais específico. Em 2x e 3x, o mínimo é R$ 50; em 1x, não há mínimo |
-| Base sem data de recebimento | Prazos usam `estimated_delivery`, e o agente avisa o cliente |
-| Base sem canal de venda | O agente pergunta, pois o arrependimento (§4.1) vale para compras online |
-| §4.3 não define o início dos 7 dias | Conta a partir do recebimento, a leitura mais favorável ao cliente |
-| Troca por defeito (30 dias, §4.2) e garantia legal (90 dias, §8.1) | A tool devolve as duas janelas, e a loja oferece intermediação |
-| Cancelamento antes da entrega não consta no manual | Não promete: abre ticket |
-| Status `pending` e `confirmed` não são definidos | Lidos como "aguardando confirmação" e "ainda não despachado" |
-| Produto `active` sem estoque, `discontinued` com saldo e `coming_soon` com saldo | Só `active` com estoque é vendável |
-| Sopro e cordas orquestrais: citados no manual, sem produtos no CSV | Diz que não há modelos no sistema agora e oferece encaminhar. O catálogo tem 65 itens, não os "300+" do manual |
-| "Lojas parceiras" sem lista | Não cita nomes |
-| Frete com pedido de exatamente R$ 500 | Não definido pelo manual. Nenhum produto custa esse valor |
+| Situação                                                                                                                                             | Decisão                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Pedidos terminam em março/2026                                                                                                                        | `AGENT_NOW=2026-03-25T10:30` no `.env.example`, para que prazos e atrasos façam sentido. Remova para usar o relógio real |
+| WhatsApp: (67) 3341-4444 no §1.2 e (67) 3321-4500 no §7                                                                                              | Vale 3341-4444, que coincide com a capa (errata em `policies/errata.py`)                                                     |
+| E-mail com e sem acento no domínio                                                                                                                    | Vale a versão sem acento, da capa                                                                                             |
+| Parcela mínima: R$ 100 na tabela do §3 e faixas no §3.1 | Vale o §3.1, mais específico. Em 2x e 3x, o mínimo é R$ 50; em 1x, não há mínimo |                                                                                                                                |
+| Base sem data de recebimento                                                                                                                           | Prazos usam `estimated_delivery`, e o agente avisa o cliente                                                                 |
+| Base sem canal de venda                                                                                                                                | O agente pergunta, pois o arrependimento (§4.1) vale para compras online                                                      |
+| §4.3 não define o início dos 7 dias                                                                                                                 | Conta a partir do recebimento, a leitura mais favorável ao cliente                                                            |
+| Troca por defeito (30 dias, §4.2) e garantia legal (90 dias, §8.1)                                                                                   | A tool devolve as duas janelas, e a loja oferece intermediação                                                               |
+| Cancelamento antes da entrega não consta no manual                                                                                                    | Não promete: abre ticket                                                                                                      |
+| Status `pending` e `confirmed` não são definidos                                                                                                 | Lidos como "aguardando confirmação" e "ainda não despachado"                                                                |
+| Produto `active` sem estoque, `discontinued` com saldo e `coming_soon` com saldo                                                                 | Só `active` com estoque é vendável                                                                                        |
+| Sopro e cordas orquestrais: citados no manual, sem produtos no CSV                                                                                     | Diz que não há modelos no sistema agora e oferece encaminhar. O catálogo tem 65 itens, não os "300+" do manual             |
+| "Lojas parceiras" sem lista                                                                                                                            | Não cita nomes                                                                                                                |
+| Frete com pedido de exatamente R$ 500                                                                                                                  | Não definido pelo manual. Nenhum produto custa esse valor                                                                     |
 
 Inconsistências da base, sem efeito no atendimento além de `total_brl` ser a fonte de verdade:
 
@@ -119,14 +119,7 @@ Inconsistências da base, sem efeito no atendimento além de `total_brl` ser a f
 
 ## Exemplos e avaliação
 
-**Pendente de execução ao vivo.** As conversas de `examples/` e o relatório de `evals/results/` são gerados apenas por execuções reais do modelo. Rode os comandos abaixo antes da entrega e substitua este parágrafo pelo resultado.
-
-```bash
-python scripts/generate_examples.py
-python -m evals.run --output evals/results/anthropic.md
-```
-
-Cenários preparados em `scripts/generate_examples.py`:
+As cinco conversas de `examples/` foram geradas por `scripts/generate_examples.py` em execuções reais com `gemini-3.5-flash-lite`, sem edição manual:
 
 1. Catálogo e preço, com PIX e parcelamento.
 2. Promoção ativa sem PIX acumulado e Black Friday vencida.
@@ -134,10 +127,19 @@ Cenários preparados em `scripts/generate_examples.py`:
 4. Produto sem estoque, descontinuado com saldo, acessórios e assunto fora de escopo.
 5. Pedido atrasado, reclamação com protocolo e recusa de dados de outro cliente.
 
-`evals/cases.py` traz 21 casos com checagens determinísticas de tools chamadas e fatos da resposta, sem LLM juiz, para serem baratos e reproduzíveis. `pytest` cobre as regras e o loop com um LLM roteirizado e os adaptadores com tipos reais dos SDKs, mas não substitui os evals.
+**Avaliação:** 21 de 21 casos aprovados com `gemini-3.5-flash-lite` (`evals/results/gemini-3.5-flash-lite.md`, com as respostas completas). `evals/cases.py` usa checagens determinísticas de tools chamadas e fatos da resposta, sem LLM juiz, para ser barato e reproduzível. `pytest` cobre as regras e o loop com um LLM roteirizado.
+
+Ressalvas sobre esse resultado:
+
+- É uma única execução, em um único modelo, com casos escritos por quem construiu o agente.
+- Ela antecede os últimos ajustes (limites de dados de entrega no resultado da tool, renomeação do campo de data e duas checagens novas). A repetição foi interrompida por falta de tempo, então a versão final do código não passou pela avaliação completa.
+- As checagens são rasas: ler as conversas revelou erros que elas não pegavam, como inventar que uma entrega atrasou ou atribuir um prazo à data errada. Esses dois foram corrigidos.
 
 ## Limitações conhecidas
 
+- **Erro conhecido em `examples/05`:** o agente diz que o pedido "foi enviado no dia 15/02/2026", mas essa é a data da compra, e a base não registra a data de envio. O campo foi renomeado para reduzir essa confusão, mas o exemplo não foi regenerado depois disso, porque a API ficou lenta. Ele foi mantido como saiu, sem edição manual.
+- O modelo `lite` ainda faz afirmações genéricas sem base nos dados, como chamar um modelo de "clássico". Ainda falta medir se um modelo maior reduz esse problema.
+- O adaptador do Claude nunca foi executado contra a API real.
 - Os dados ficam em memória, lidos dos CSVs ao iniciar. Alterações nos arquivos exigem reiniciar.
 - O agente só consulta e registra tickets. Não fecha vendas, não cancela e não reembolsa.
 - Tickets ficam no SQLite local, sem integração com a equipe.
@@ -159,11 +161,9 @@ Cenários preparados em `scripts/generate_examples.py`:
 
 ## Uso de assistentes de código
 
-> **Rascunho: revise e ajuste para refletir o seu workflow real antes de entregar.**
-
 Usei o **Claude Code** (modelo Claude Opus 5.5) como par de programação. Eu defini o objetivo e tomei as decisões de provedor e de publicação do repositório. O Claude Code leu o enunciado, o manual e os CSVs, levantou as inconsistências da base, propôs o plano que aprovei e implementou o código e os testes em commits incrementais, que trazem `Co-Authored-By`.
 
-O que ajudou a manter a qualidade: plano revisado antes do código, auditoria dos dados antes de modelar as regras e testes escritos a partir das armadilhas encontradas. Um deles pegou um bug real, em que a busca por "violões" trazia ukuleles. As conversas de exemplo são geradas por script, para não haver texto escrito à mão.
+O que ajudou a manter a qualidade: plano revisado antes do código, auditoria dos dados antes de modelar as regras e testes escritos a partir das armadilhas encontradas. Um deles pegou um bug real, em que a busca por "violões" trazia ukuleles. As conversas de exemplo são geradas por script, para não haver texto escrito à mão, e a leitura delas orientou correções no prompt e nas tools.
 
 ## Estrutura
 

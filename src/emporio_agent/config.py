@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_MODELS = {
     "anthropic": "claude-opus-5-5",
-    "gemini": "gemini-3.6-flash",
+    "gemini": "gemini-3.5-flash-lite",
 }
 
 
@@ -49,7 +49,7 @@ def _parse_now(raw: str | None) -> datetime | None:
 
 def load_settings() -> Settings:
     load_dotenv(PROJECT_ROOT / ".env")
-    provider = os.getenv("LLM_PROVIDER", "anthropic").strip().lower()
+    provider = os.getenv("LLM_PROVIDER", "gemini").strip().lower()
     if provider not in DEFAULT_MODELS:
         raise ValueError(f"LLM_PROVIDER inválido: {provider!r}. Use anthropic ou gemini.")
     return Settings(

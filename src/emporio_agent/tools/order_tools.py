@@ -25,6 +25,11 @@ LOCKED_MESSAGE = (
     "encaminhe o cliente à equipe pelo telefone (67) 3341-4444."
 )
 
+SHIPPING_DATA_LIMIT = (
+    "O sistema não informa a data de envio, a transportadora nem o motivo de atraso. Não cite esses dados. "
+    "compra_realizada_em é a data da compra, não a do envio."
+)
+
 STATUS_LABELS = {
     OrderStatus.PENDING: "Pendente: aguardando confirmação",
     OrderStatus.CONFIRMED: "Confirmado: ainda não despachado",
@@ -142,7 +147,7 @@ def build_order_tools(
         ]
         view = {
             "pedido": order.id,
-            "data_da_compra": format_date(order.order_date),
+            "compra_realizada_em": format_date(order.order_date),
             "status": STATUS_LABELS[order.status],
             "itens": items,
             "total": format_brl(order.total),
@@ -150,6 +155,7 @@ def build_order_tools(
         }
         if order.tracking_code:
             view["codigo_rastreio"] = order.tracking_code
+            view["limite_dos_dados"] = SHIPPING_DATA_LIMIT
         if order.estimated_delivery:
             view["previsao_entrega"] = format_date(order.estimated_delivery)
         if order.notes:

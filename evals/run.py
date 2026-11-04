@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import tempfile
+import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -85,6 +86,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--only", help="IDs de casos separados por vírgula.")
     parser.add_argument("--output", type=Path, help="Grava o relatório em markdown.")
+    parser.add_argument("--pause", type=float, default=0, help="Segundos entre casos, para respeitar limites por minuto.")
     args = parser.parse_args()
 
     only = set(args.only.split(",")) if args.only else None
@@ -106,6 +108,7 @@ def main() -> int:
                 break
             print(f"{'OK    ' if result.passed else 'FALHOU'} {case.id} {result.failures or ''}")
             results.append(result)
+            time.sleep(args.pause)
 
     report = render_report(results, settings.provider, settings.model)
     if args.output:

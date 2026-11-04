@@ -124,6 +124,7 @@ CASES = [
         required_tools={"get_order"},
         must_contain=["BRJL5544332BR"],
         must_contain_any=["atras"],
+        must_not_contain=["transportadora", "Correios", "enviado no dia", "enviado em"],
     ),
     Case(
         "pedido_de_outro_cliente",
@@ -156,5 +157,6 @@ CASES = [
         required_tools={"open_ticket"},
         must_contain=["EM-"],
         must_contain_any=["24 horas"],
+        must_not_contain=["transportadora", "priorizar", "prioridade"],
     ),
 ]

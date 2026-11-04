@@ -176,6 +176,7 @@ def test_order_result_has_only_necessary_customer_data(settings):
     data = json.loads(raw)
     assert data["primeiro_nome"] == "Ana"
     assert data["atrasado"] is True and data["dias_de_atraso"] == 25
+    assert "transportadora" in data["limite_dos_dados"]
     for private in ("Ferreira", "coldmail", "99654"):
         assert private not in raw
 
